@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>GameTest</title>
+    <style>
+      #player {
+        width: 50px;
+        height: 50px;
+        background-color: red;
+        position: absolute;
+        left: 100px;
+        top: 100px;
+        transform-origin: center center; 
+      }
+
+      #wall1 {
+        width: 500px;
+        height: 50px;
+        background-color: black;
+        position: absolute;
+        left: -250px;
+        top: 300px;
+      }
+       #wall2 {
+        width: 50px;
+        height: 500px;
+        background-color: black;
+        position: absolute;
+        left: -550px;
+        top: 300px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="player"></div>
+    <div class="wall" id="wall1"></div>
+ <div class="wall" id="wall2"></div>
+    <script>
+  const frameInterval = 1000 / 60;
+  let lastFrame = 0;
+  let x = 100;
+  let y = 100;
+
+  let velocityY = 0;
+  let velocityX = 0;
+  let onGround = false;
+
+  const player = document.getElementById("player");
+  const wall = document.getElementById("wall1");
+
+  let keys = {};
+
+  let scaleX = 1;
+  let scaleY = 1;
+  let springVelocityX = 0;
+  let springVelocityY = 0;
+
+  const stiffness = 0.1;
+  const damping = 0.8;
+
+  document.addEventListener("keydown", function(event) {
+    keys[event.key] = true;
+
+    // Jump
+    if ((event.key === " " || event.key === "ArrowUp") && onGround) {
+      velocityY = -12;
+      y += -30;
+      onGround = false;
+    }
+  });
+
+  document.addEventListener("keyup", function(event) {
+    keys[event.key] = false;
+  });
+
+  function checkCollision(px, py, wallRect) {
+    return (
+      px < wallRect.right &&
+      px + 50 > wallRect.left &&
+      py < wallRect.bottom &&
+      py + 50 > wallRect.top
+    );
+  }
+
+  function gameLoop(timestamp) {
+    requestAnimationFrame(gameLoop);
+
+    if (timestamp - lastFrame < frameInterval) return;
+    lastFrame = timestamp;
+
+    let oldX = x;
+    let oldY = y;
+
+    // Horizontal movement
+    if (keys["ArrowRight"]) {
+      velocityX += 5;
+    }
+
+    if (keys["ArrowLeft"]) {
+      velocityX -= 5;
+    }
+
+    velocityY += 1;
+    y += velocityY;
+    x += velocityX;
+    velocityX += (0 - velocityX) / 4;
+
+    if (y >= 500) {
+      y = 100;
+      x = 100;
+      velocityY = -10;
+    }
+
+    const wallRect = wall.getBoundingClientRect();
+
+    if (checkCollision(x, y, wallRect)) {
+      if (oldY + 50 <= wallRect.top) {
+        y = wallRect.top - 50;
+
+        if (velocityY > 2) {
+          springVelocityY = -velocityY * 0.05;
+          springVelocityX = velocityY * 0.05;
+        }
+
+        velocityY = 0;
+        onGround = true;
+      } else {
+        // Side collision
+        x = oldX;
+
+        if (Math.abs(velocityX) > 2) {
+          springVelocityX = -Math.abs(velocityX) * 0.05;
+          springVelocityY = Math.abs(velocityX) * 0.05;
+        }
+
+        velocityX = 0;
+        y = oldY;
+        velocityY = 0;
+      }
+    } else {
+      onGround = false;
+    }
+
+    const targetScaleY = 1 + Math.abs(velocityY) * 0.03;
+    const targetScaleX = 1 + Math.abs(velocityX) * 0.03;
+
+    const forceY = (targetScaleY - scaleY) * stiffness;
+    const forceX = (targetScaleX - scaleX) * stiffness;
+
+    springVelocityY += forceY;
+    springVelocityX += forceX;
+
+    springVelocityY *= damping;
+    springVelocityX *= damping;
+
+    scaleY += springVelocityY;
+    scaleX += springVelocityX;
+
+    player.style.left = x + "px";
+    player.style.top = y + "px";
+    player.style.transform = `scale(${scaleX}, ${scaleY})`;
+  }
+
+  requestAnimationFrame(gameLoop);
+</script>
+
+  </body>
+</html>
